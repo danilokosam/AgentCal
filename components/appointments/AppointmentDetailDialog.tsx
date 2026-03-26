@@ -94,18 +94,18 @@ export function AppointmentDetailDialog({
     if (!appointment) return;
     setPatientName(appointment.title);
     setReason(appointment.description ?? "");
-    setStaffId(appointment.staff_id ?? "");
-    setRoomId(appointment.room_id ?? "");
+    setStaffId(appt.staff_id ?? "");
+    setRoomId(appt.room_id ?? "");
 
     // Extract HH:MM from ISO for the time select
-    const d = new Date(appointment.start_time);
+    const d = new Date(appt.start_time);
     const h = String(d.getUTCHours()).padStart(2, "0");
     const m = String(d.getUTCMinutes()).padStart(2, "0");
     setStartTime(`${h}:${m}`);
 
     const diffMin =
-      (new Date(appointment.end_time).getTime() -
-        new Date(appointment.start_time).getTime()) /
+      (new Date(appt.end_time).getTime() -
+        new Date(appt.start_time).getTime()) /
       60000;
     const closest = DURATIONS.reduce((prev, cur) =>
       Math.abs(cur.value - diffMin) < Math.abs(prev.value - diffMin) ? cur : prev
@@ -114,8 +114,10 @@ export function AppointmentDetailDialog({
   }, [appointment]);
 
   if (!appointment) return null;
+  // Narrowed to non-null — safe to use in closures below
+  const appt = appointment;
 
-  const dateLabel = format(new Date(appointment.start_time), "EEEE d 'de' MMMM yyyy");
+  const dateLabel = format(new Date(appt.start_time), "EEEE d 'de' MMMM yyyy");
   const timeOptions = generateTimeOptions();
 
   async function handleSave() {
@@ -131,7 +133,7 @@ export function AppointmentDetailDialog({
     setIsSaving(true);
     try {
       // Build start ISO from selected date + selected time
-      const baseDateStr = format(new Date(appointment.start_time), "yyyy-MM-dd");
+      const baseDateStr = format(new Date(appt.start_time), "yyyy-MM-dd");
       const [h, m] = startTime.split(":").map(Number);
       const startMs = Date.UTC(
         Number(baseDateStr.slice(0, 4)),
@@ -144,7 +146,7 @@ export function AppointmentDetailDialog({
       const startISO = new Date(startMs).toISOString();
       const endISO = new Date(endMs).toISOString();
 
-      const res = await fetch(`/api/appointments/${appointment.id}`, {
+      const res = await fetch(`/api/appointments/${appt.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -181,7 +183,7 @@ export function AppointmentDetailDialog({
   async function handleCancel() {
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/appointments/${appointment.id}`, {
+      const res = await fetch(`/api/appointments/${appt.id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ business_id: BUSINESS_ID }),
@@ -213,9 +215,9 @@ export function AppointmentDetailDialog({
             <DialogTitle className="text-slate-900 text-base">Detalle de Cita</DialogTitle>
             <Badge
               variant="secondary"
-              className={STATUS_COLORS[appointment.status] ?? "bg-slate-100 text-slate-500"}
+              className={STATUS_COLORS[appt.status] ?? "bg-slate-100 text-slate-500"}
             >
-              {STATUS_LABELS[appointment.status] ?? appointment.status}
+              {STATUS_LABELS[appt.status] ?? appt.status}
             </Badge>
           </div>
           <p className="text-xs text-slate-400 mt-1 capitalize">{dateLabel}</p>
@@ -227,19 +229,19 @@ export function AppointmentDetailDialog({
             <div className="flex justify-between">
               <span className="text-slate-500">Hora actual</span>
               <span className="font-medium text-slate-800">
-                {formatTime(appointment.start_time)} – {formatTime(appointment.end_time)}
+                {formatTime(appt.start_time)} – {formatTime(appt.end_time)}
               </span>
             </div>
-            {appointment.staff && (
+            {appt.staff && (
               <div className="flex justify-between">
                 <span className="text-slate-500">Doctor</span>
-                <span className="font-medium text-slate-800">{appointment.staff.name}</span>
+                <span className="font-medium text-slate-800">{appt.staff.name}</span>
               </div>
             )}
-            {appointment.room && (
+            {appt.room && (
               <div className="flex justify-between">
                 <span className="text-slate-500">Sala</span>
-                <span className="font-medium text-slate-800">{appointment.room.name}</span>
+                <span className="font-medium text-slate-800">{appt.room.name}</span>
               </div>
             )}
           </div>
