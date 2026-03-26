@@ -67,17 +67,18 @@ function NativeSelect({
 }
 
 export function AppointmentFormDialog({ open, onOpenChange, staff, rooms, onSuccess, prefill }: Props) {
-  const [title, setTitle]       = useState("");
-  const [staffId, setStaffId]   = useState(prefill?.staffId ?? "");
-  const [roomId, setRoomId]     = useState("");
-  const [date, setDate]         = useState<Date>(new Date());
-  const [startTime, setStart]   = useState("09:00");
-  const [duration, setDuration] = useState(30);
-  const [submitting, setSub]    = useState(false);
-  const [calOpen, setCalOpen]   = useState(false);
+  const [patientName, setPatientName] = useState("");
+  const [reason, setReason]           = useState("");
+  const [staffId, setStaffId]         = useState(prefill?.staffId ?? "");
+  const [roomId, setRoomId]           = useState("");
+  const [date, setDate]               = useState<Date>(new Date());
+  const [startTime, setStart]         = useState("09:00");
+  const [duration, setDuration]       = useState(30);
+  const [submitting, setSub]          = useState(false);
+  const [calOpen, setCalOpen]         = useState(false);
 
   const handleSubmit = async () => {
-    if (!title.trim()) { toast.error("El título / paciente es obligatorio"); return; }
+    if (!patientName.trim()) { toast.error("El nombre del paciente es obligatorio"); return; }
     if (!staffId && !roomId) { toast.error("Selecciona al menos un doctor o una sala"); return; }
 
     const [h, m] = startTime.split(":").map(Number);
@@ -94,7 +95,8 @@ export function AppointmentFormDialog({ open, onOpenChange, staff, rooms, onSucc
           business_id: BUSINESS_ID,
           staff_id: staffId || undefined,
           room_id: roomId || undefined,
-          title: title.trim(),
+          title: patientName.trim(),
+          description: reason.trim() || undefined,
           start_time,
           end_time,
           metadata: { booked_via: "web_ui" },
@@ -124,7 +126,7 @@ export function AppointmentFormDialog({ open, onOpenChange, staff, rooms, onSucc
   };
 
   const resetForm = () => {
-    setTitle(""); setStaffId(""); setRoomId(""); setStart("09:00"); setDuration(30);
+    setPatientName(""); setReason(""); setStaffId(""); setRoomId(""); setStart("09:00"); setDuration(30);
   };
 
   return (
@@ -135,14 +137,28 @@ export function AppointmentFormDialog({ open, onOpenChange, staff, rooms, onSucc
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Paciente / Título */}
+          {/* Nombre del paciente */}
           <div className="space-y-1.5">
-            <Label htmlFor="title">Paciente / Motivo</Label>
+            <Label htmlFor="patientName">Nombre del Paciente</Label>
             <Input
-              id="title"
-              placeholder="Ej: Consulta — Juan García"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              id="patientName"
+              placeholder="Ej: Juan García"
+              value={patientName}
+              onChange={(e) => setPatientName(e.target.value)}
+            />
+          </div>
+
+          {/* Motivo de la consulta */}
+          <div className="space-y-1.5">
+            <Label htmlFor="reason">
+              Motivo de la Consulta{" "}
+              <span className="text-slate-400 font-normal">(opcional)</span>
+            </Label>
+            <Input
+              id="reason"
+              placeholder="Ej: Revisión anual, dolor de cabeza…"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
             />
           </div>
 
