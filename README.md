@@ -1,6 +1,6 @@
 # AgentCal
 
-Sistema de agendamiento de citas impulsado por IA. Permite que agentes de lenguaje (como Claude) reserven, consulten y cancelen citas a través de una API REST o directamente mediante el protocolo MCP (Model Context Protocol).
+Sistema de agendamiento de citas impulsado por IA. Permite que agentes de lenguaje (como Claude) reserven, consulten y cancelen citas a través de una API REST o directamente mediante el protocolo MCP (Model Context Protocol). Incluye una interfaz web completa para gestión visual del calendario.
 
 ---
 
@@ -11,7 +11,11 @@ Sistema de agendamiento de citas impulsado por IA. Permite que agentes de lengua
 | Framework | Next.js 15 (App Router) |
 | Lenguaje | TypeScript (strict) |
 | Base de datos | Supabase (PostgreSQL) |
-| Estilos (futuro frontend) | Tailwind CSS |
+| UI Components | shadcn/ui v4 (base-nova / @base-ui/react) |
+| Estilos | Tailwind CSS v4 |
+| Iconos | Lucide React |
+| Toasts | Sonner |
+| Fechas | date-fns |
 | Protocolo para agentes | MCP 2024-11-05 sobre stdio |
 
 ---
@@ -19,17 +23,17 @@ Sistema de agendamiento de citas impulsado por IA. Permite que agentes de lengua
 ## Arquitectura general
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        CLIENTES                             │
-│                                                             │
-│   Browser / Postman          Claude Code / Agente IA        │
-│   (HTTP REST)                (Model Context Protocol)       │
-└──────────────┬──────────────────────────┬───────────────────┘
-               │                          │
-               ▼                          ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                           CLIENTES                               │
+│                                                                  │
+│   Navegador Web              Claude Code / Agente IA             │
+│   (interfaz React)           (Model Context Protocol)            │
+└──────────┬───────────────────────────────┬───────────────────────┘
+           │ fetch()                       │ JSON-RPC 2.0 (stdio)
+           ▼                              ▼
 ┌──────────────────────┐    ┌─────────────────────────────┐
 │   /app/api/          │    │   /mcp/server.ts             │
-│   Endpoints REST     │    │   Servidor MCP (stdio)       │
+│   Endpoints REST     │    │   Servidor MCP               │
 │   (Next.js routes)   │    │   JSON-RPC 2.0               │
 └──────────┬───────────┘    └──────────────┬──────────────┘
            │                               │
@@ -67,84 +71,168 @@ Sistema de agendamiento de citas impulsado por IA. Permite que agentes de lengua
 ```
 AgentCal/
 │
-├── app/                          ← Next.js App Router
-│   ├── layout.tsx                  Raíz del layout (HTML, metadata)
-│   ├── page.tsx                    Página principal (placeholder frontend)
-│   ├── globals.css                 Tailwind base styles
+├── app/                              ← Next.js App Router
+│   ├── layout.tsx                      Raíz: Toaster (sonner) + TooltipProvider
+│   ├── page.tsx                        Redirige / → /dashboard
+│   ├── globals.css                     Tailwind v4 + CSS variables shadcn
 │   │
-│   └── api/                      ← Endpoints HTTP REST
+│   ├── (dashboard)/                  ← Grupo de rutas con layout compartido
+│   │   ├── layout.tsx                  Shell: Sidebar fija + <main> scrollable
+│   │   ├── dashboard/page.tsx          KPI cards + CalendarGrid + botón Nueva Cita
+│   │   ├── calendario/page.tsx         Vista de agenda a pantalla completa
+│   │   ├── equipo/page.tsx             Cards del staff con estado Activo/Inactivo
+│   │   ├── salas/page.tsx              Cards de salas con capacidad
+│   │   └── configuracion/page.tsx      Info del negocio y estado del protocolo MCP
+│   │
+│   └── api/                          ← Endpoints HTTP REST
 │       ├── appointments/
-│       │   ├── route.ts            GET /api/appointments  → listar citas
-│       │   │                       POST /api/appointments → crear cita
-│       │   ├── [id]/
-│       │   │   └── route.ts        GET  /api/appointments/:id → detalle
-│       │   │                       DELETE /api/appointments/:id → cancelar
-│       │   └── availability/
-│       │       └── route.ts        GET /api/appointments/availability
-│       │                           → slots libres para una fecha y duración
-│       ├── staff/
-│       │   └── route.ts            GET  → listar staff activo
-│       │                           POST → crear staff
-│       └── rooms/
-│           └── route.ts            GET  → listar salas activas
-│                                   POST → crear sala
+│       │   ├── route.ts                GET (listar) + POST (crear, anti-conflicto)
+│       │   ├── [id]/route.ts           GET (detalle) + DELETE (cancelar)
+│       │   └── availability/route.ts   GET → slots libres para fecha y duración
+│       ├── staff/route.ts              GET (listar activos) + POST (crear)
+│       └── rooms/route.ts              GET (listar activas) + POST (crear)
 │
-├── lib/                          ← Utilidades compartidas (sin lógica de negocio)
-│   ├── supabase.ts                 Dos clientes de Supabase:
-│   │                               · supabase        (anon key, respeta RLS)
-│   │                               · createAdminClient() (service role, sin RLS)
-│   └── dateUtils.ts                Funciones de fechas en UTC:
-│                                   · isValidISODate()   valida ISO 8601
-│                                   · isValidTimeRange() start < end
-│                                   · durationMinutes()  diferencia en minutos
-│                                   · dayBoundsUTC()     límites de un día
-│                                   · generateSlots()    genera franjas horarias
-│                                   · rangesOverlap()    detecta solapamiento
+├── components/
+│   ├── layout/
+│   │   ├── Sidebar.tsx               Nav fija con active-link highlight (blue-600),
+│   │   │                             logo mark y badge de versión
+│   │   └── TopBar.tsx                Navegador de fecha ← Hoy → + CTA "Nueva Cita"
+│   │
+│   ├── dashboard/
+│   │   ├── KpiCards.tsx              3 cards: Capacidad %, Citas del día, MCP Active
+│   │   ├── CalendarGrid.tsx          Grid horas × doctores; citas como bloques azules;
+│   │   │                             celdas vacías clickeables para pre-llenar el form
+│   │   └── AppointmentBlock.tsx      Bloque azul con nombre + rango horario + Tooltip
+│   │
+│   └── appointments/
+│       └── AppointmentFormDialog.tsx Dialog con form completo:
+│                                     · <select> nativos (evita conflicto de portales
+│                                       entre base-ui Select y Dialog)
+│                                     · DatePicker: PopoverTrigger + Calendar
+│                                     · Toast rojo en HTTP 409 (conflicto de agenda)
+│                                     · Toast verde en éxito + refetch automático
 │
-├── services/                     ← Lógica de negocio pura
-│   └── appointmentService.ts       Todas las operaciones críticas:
-│                                   · checkConflicts()    ¿staff o sala ocupados?
-│                                   · getAvailability()   slots libres del día
-│                                   · bookAppointment()   valida + reserva + anti-solape
-│                                   · cancelAppointment() marca como 'cancelled'
-│                                   · getAppointment()    detalle con relaciones
-│                                   · listAppointments()  listado con filtros
+├── hooks/
+│   ├── useStaff.ts                   fetch + AbortController + timeout 5s + mounted flag
+│   ├── useRooms.ts                   Ídem para salas
+│   └── useAppointments.ts            Ídem para citas; acepta `date: Date` como param
 │
-├── mcp/                          ← Protocolo MCP para agentes de IA
-│   ├── tools.ts                    Definición de las 6 herramientas (JSON Schema):
-│   │                               · get_availability
-│   │                               · book_appointment
-│   │                               · list_appointments
-│   │                               · cancel_appointment
-│   │                               · list_staff
-│   │                               · list_rooms
-│   └── server.ts                   Servidor MCP sobre stdio (JSON-RPC 2.0).
-│                                   Recibe mensajes de Claude, despacha a services/,
-│                                   devuelve respuestas estructuradas.
-│                                   Arranque: npm run mcp
+├── lib/
+│   ├── supabase.ts                   Cliente anon y admin (service role)
+│   ├── dateUtils.ts                  isValidISODate, rangesOverlap, generateSlots…
+│   ├── calendarUtils.ts              slotToRow, durationToRowSpan, generateTimeOptions…
+│   ├── constants.ts                  BUSINESS_ID, HOURS_START/END, SLOT_MINUTES
+│   └── utils.ts                      cn() helper (clsx + tailwind-merge)
 │
-├── types/                        ← Definiciones TypeScript
-│   ├── database.ts                 Tipos que reflejan exactamente el esquema SQL:
-│   │                               BusinessRow, StaffRow, RoomRow, AppointmentRow
-│   │                               + tipo Database<> genérico para Supabase client
-│   └── appointments.ts             Tipos de dominio / lógica de negocio:
-│                                   TimeSlot, AvailabilityQuery, AvailabilityResult,
-│                                   BookAppointmentInput, ConflictCheckResult,
-│                                   AppointmentWithRelations
+├── services/
+│   └── appointmentService.ts         checkConflicts, getAvailability, bookAppointment,
+│                                     cancelAppointment, getAppointment, listAppointments
 │
-├── supabase/
-│   └── migrations/               ← Scripts SQL (ejecutar en orden en Supabase)
-│       ├── 001_initial_schema.sql  Crea las 4 tablas, índices y trigger updated_at
-│       ├── 002_rls.sql             Activa Row Level Security en todas las tablas
-│       └── 003_seed.sql            Datos de ejemplo: Demo Clinic, 2 doctores,
-│                                   3 salas, 2 citas de prueba
+├── mcp/
+│   ├── tools.ts                      6 tool definitions (JSON Schema)
+│   └── server.ts                     Servidor MCP stdio (JSON-RPC 2.0)
 │
-├── .env.local.example            ← Variables de entorno necesarias (copiar a .env.local)
-├── next.config.ts                ← Configuración de Next.js
-├── tailwind.config.ts            ← Configuración de Tailwind CSS
-├── tsconfig.json                 ← TypeScript en modo strict, alias @/*
-└── package.json                  ← Scripts: dev, build, start, lint, mcp
+├── types/
+│   ├── database.ts                   Row types: BusinessRow, StaffRow, RoomRow, AppointmentRow
+│   └── appointments.ts               Domain types: AvailabilityQuery, BookAppointmentInput…
+│
+├── supabase/migrations/
+│   ├── 001_initial_schema.sql        Tablas, índices, trigger updated_at
+│   ├── 002_rls.sql                   Row Level Security por business_id
+│   └── 003_seed.sql                  Demo Clinic: 3 staff, 3 salas, 2 citas
+│
+├── .env.local.example                Variables necesarias (copiar a .env.local)
+├── commit.txt                        Mensaje de commit detallado con todo el historial
+├── next.config.ts
+├── tailwind.config.ts
+├── tsconfig.json
+└── package.json                      Scripts: dev, build, start, lint, mcp
 ```
+
+---
+
+## Frontend — Vistas
+
+### Dashboard (`/dashboard`)
+
+La vista principal. Muestra el estado del día en tiempo real.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  TopBar: ← Miércoles 26 de marzo [Hoy] →    [+ Nueva Cita]  │
+├──────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
+│  │ Capacidad Hoy│  │  Citas Hoy   │  │ Estado Sistema   │   │
+│  │    85%  ████ │  │      3       │  │ ● MCP Active     │   │
+│  └──────────────┘  └──────────────┘  └──────────────────┘   │
+│                                                              │
+│  Agenda del día                                              │
+│  ┌────────┬──────────────────┬──────────────┬─────────────┐ │
+│  │        │  Dr. Ana García  │ Dr. C. López │ L. Martínez │ │
+│  │ 08:00  │                  │              │             │ │
+│  │ 08:30  │                  │              │             │ │
+│  │ 09:00  │ ┌──────────────┐ │              │             │ │
+│  │        │ │ Consulta –   │ │              │             │ │
+│  │        │ │ Daniel Prueba│ │              │             │ │
+│  │        │ │ 09:00–09:30  │ │              │             │ │
+│  │        │ └──────────────┘ │              │             │ │
+│  │ 09:30  │                  │              │             │ │
+│  └────────┴──────────────────┴──────────────┴─────────────┘ │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**KPI Cards:**
+- **Capacidad Hoy** — porcentaje de slots confirmados vs. total posible (staff × 20 slots/día), con barra de progreso azul
+- **Citas Hoy** — suma de citas confirmed + pending del día
+- **Estado del Sistema** — badge verde con punto pulsante "MCP Active"
+
+**CalendarGrid:**
+- Filas: 20 slots de 30 min (08:00–18:00 UTC)
+- Columnas: una por cada miembro del staff activo
+- Citas: bloques `bg-blue-600` con nombre del paciente y horario
+- Celdas vacías: hover azul claro, click abre el formulario pre-llenado con el doctor y hora seleccionados
+
+### Formulario de Nueva Cita
+
+Dialog modal con validación en cliente y servidor.
+
+```
+┌─────────────────────────────────┐
+│  Nueva Cita                     │
+├─────────────────────────────────┤
+│  Paciente / Motivo              │
+│  [ Consulta — Juan García     ] │
+│                                 │
+│  Doctor                         │
+│  [ Dr. Ana García          ▾ ] │
+│                                 │
+│  Sala (opcional)                │
+│  [ Consultation Room A     ▾ ] │
+│                                 │
+│  Fecha                          │
+│  [ 📅 miércoles, 26 de marzo  ] │
+│                                 │
+│  Hora inicio    Duración        │
+│  [ 09:00   ▾ ] [ 30 minutos ▾ ]│
+│                                 │
+│  [Cancelar]  [Confirmar cita]   │
+└─────────────────────────────────┘
+```
+
+**Flujo de validación:**
+1. Si faltan campos → toast naranja de error
+2. POST a `/api/appointments` con los datos
+3. Si HTTP 409 → toast rojo: `"Conflicto detectado: staff is already booked (...)`
+4. Si HTTP 201 → toast verde: `"Cita creada exitosamente"` + cierre del dialog + refetch del grid
+
+### Otras vistas
+
+| Ruta | Contenido |
+|------|-----------|
+| `/calendario` | CalendarGrid a pantalla completa con navegación de fecha |
+| `/equipo` | Cards de staff: nombre, email, rol, badge Activo/Inactivo |
+| `/salas` | Cards de salas: nombre, capacidad, badge Activa/Inactiva |
+| `/configuracion` | Datos del negocio y estado del protocolo MCP |
 
 ---
 
@@ -276,6 +364,7 @@ Edita `.env.local` con tus credenciales de Supabase:
 NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
 SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
+NEXT_PUBLIC_BUSINESS_ID=a1b2c3d4-0000-0000-0000-000000000001
 ```
 
 ### 2. Base de datos
@@ -292,7 +381,7 @@ supabase/migrations/003_seed.sql            ← datos de ejemplo
 
 ```bash
 npm run dev
-# → http://localhost:3000
+# → http://localhost:3000/dashboard
 ```
 
 ### 4. Probar la API desde la terminal
@@ -328,8 +417,8 @@ Para conectar Claude Code al servidor MCP, agrega esto a tu configuración MCP:
 {
   "mcpServers": {
     "agent-cal": {
-      "command": "npx",
-      "args": ["tsx", "mcp/server.ts"],
+      "command": "node",
+      "args": ["--env-file=.env.local", "--import", "tsx", "mcp/server.ts"],
       "cwd": "C:/Users/Daniel/OneDrive/Escritorio/prueba-de-repos/AgentCal"
     }
   }
@@ -368,4 +457,6 @@ Citas pre-cargadas:
 - **Todos los timestamps son UTC** — la columna `businesses.timezone` existe solo para mostrar la hora al usuario final, nunca para calcular.
 - **El `adminClient` (service role)** se usa exclusivamente en API routes y el servicio MCP. Jamás se expone al navegador.
 - **RLS es defensa en profundidad** — las políticas filtran por `business_id` extraído del JWT. En el MVP, las rutas de API usan el admin client, por lo que RLS no bloquea las operaciones internas.
-- **Sin frontend todavía** — `app/page.tsx` es un placeholder. Los componentes de UI se agregarán en la siguiente fase.
+- **Hooks con `mounted` flag** — los tres hooks de datos (`useStaff`, `useRooms`, `useAppointments`) usan un flag `mounted` para evitar actualizaciones de estado tras desmontaje, previniendo errores de navegación cliente-side en Next.js App Router.
+- **`<select>` nativos en formularios** — el `Select` de shadcn v4 usa `@base-ui/react` que tiene conflictos de portal con `Dialog`. Los formularios usan `<select>` HTML nativo estilizado con Tailwind para máxima compatibilidad.
+- **Sin gestor de estado externo** — `useState` + `useEffect` es suficiente para las tres fuentes de datos independientes del MVP.

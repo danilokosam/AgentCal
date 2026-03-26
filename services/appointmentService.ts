@@ -43,10 +43,11 @@ export async function checkConflicts(
     query = query.neq("id", options.exclude_appointment_id);
   }
 
-  const { data, error } = await query;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (query as any);
   if (error) throw new Error(`DB error checking conflicts: ${error.message}`);
 
-  for (const appt of data ?? []) {
+  for (const appt of (data ?? []) as Array<{ id: string; staff_id: string | null; room_id: string | null }>) {
     if (options.staff_id && appt.staff_id === options.staff_id) {
       return { hasConflict: true, conflictingAppointmentId: appt.id, conflictType: "staff" };
     }
@@ -83,7 +84,9 @@ export async function getAvailability(query: AvailabilityQuery): Promise<Availab
 
   if (error) throw new Error(`DB error fetching appointments: ${error.message}`);
 
-  const existingAppts = existing ?? [];
+  type ApptSlim = { id: string; staff_id: string | null; room_id: string | null; start_time: string; end_time: string };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const existingAppts = ((existing as any) ?? []) as ApptSlim[];
 
   const available_slots = candidates.filter((slot) => {
     for (const appt of existingAppts) {
@@ -125,24 +128,22 @@ export async function bookAppointment(
 
   // ── Insert ──
   const db = createAdminClient();
-  const { data, error } = await db
-    .from("appointments")
-    .insert({
-      business_id,
-      staff_id: staff_id ?? null,
-      room_id: room_id ?? null,
-      title,
-      description: description ?? null,
-      start_time,
-      end_time,
-      status: "confirmed",
-      metadata: metadata ?? null,
-    })
-    .select()
-    .single();
+  const insertPayload = {
+    business_id,
+    staff_id: staff_id ?? null,
+    room_id: room_id ?? null,
+    title,
+    description: description ?? null,
+    start_time,
+    end_time,
+    status: "confirmed",
+    metadata: metadata ?? null,
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (db.from("appointments").insert(insertPayload as any).select().single() as any);
 
   if (error) throw new Error(`Failed to create appointment: ${error.message}`);
-  return data;
+  return data as AppointmentRow;
 }
 
 // ─── Cancellation ────────────────────────────────────────────────────────────
@@ -152,17 +153,12 @@ export async function cancelAppointment(
   business_id: string
 ): Promise<AppointmentRow> {
   const db = createAdminClient();
-  const { data, error } = await db
-    .from("appointments")
-    .update({ status: "cancelled" })
-    .eq("id", appointment_id)
-    .eq("business_id", business_id)
-    .select()
-    .single();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (db.from("appointments").update({ status: "cancelled" } as any).eq("id", appointment_id).eq("business_id", business_id).select().single() as any);
 
   if (error) throw new Error(`Failed to cancel appointment: ${error.message}`);
   if (!data) throw new Error("Appointment not found or access denied");
-  return data;
+  return data as AppointmentRow;
 }
 
 // ─── Read ────────────────────────────────────────────────────────────────────

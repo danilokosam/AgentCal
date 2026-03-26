@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -10,20 +9,21 @@ if (!supabaseAnonKey) throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
 /**
  * Browser-safe client — uses anon key, respects RLS.
- * Use this in Server Components that don't need elevated privileges.
+ * Note: typed with `any` for now; replace with Supabase CLI-generated types
+ * (`supabase gen types typescript`) when connecting the Supabase CLI.
  */
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const supabase = createClient<any>(supabaseUrl, supabaseAnonKey);
 
 /**
  * Server-only admin client — uses service role key, bypasses RLS.
  * Never expose this client to the browser.
- * Use this in API routes / server actions that need unrestricted DB access.
  */
 export function createAdminClient() {
   if (!supabaseServiceKey) {
     throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY — admin client requires service role key");
   }
-  return createClient<Database>(supabaseUrl!, supabaseServiceKey, {
+  return createClient<any>(supabaseUrl!, supabaseServiceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }

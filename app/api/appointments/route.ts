@@ -5,6 +5,8 @@ import { bookAppointment, listAppointments } from "@/services/appointmentService
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const business_id = searchParams.get("business_id");
+  const date = searchParams.get("date");
+  console.log("[GET /api/appointments] business_id:", business_id, "| date:", date);
 
   if (!business_id) {
     return NextResponse.json({ error: "business_id is required" }, { status: 400 });
@@ -12,14 +14,16 @@ export async function GET(req: NextRequest) {
 
   try {
     const appointments = await listAppointments(business_id, {
-      date: searchParams.get("date") ?? undefined,
+      date: date ?? undefined,
       staff_id: searchParams.get("staff_id") ?? undefined,
       room_id: searchParams.get("room_id") ?? undefined,
       status: searchParams.get("status") ?? undefined,
     });
+    console.log("[GET /api/appointments] Supabase Response:", { count: appointments.length, error: null });
     return NextResponse.json({ appointments });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[GET /api/appointments] Supabase Error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
