@@ -80,8 +80,8 @@ export function AppointmentDetailDialog({
   rooms,
   onSuccess,
 }: Props) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [patientName, setPatientName] = useState("");
+  const [reason, setReason] = useState("");
   const [staffId, setStaffId] = useState("");
   const [roomId, setRoomId] = useState("");
   const [startTime, setStartTime] = useState("");
@@ -92,8 +92,8 @@ export function AppointmentDetailDialog({
   // Populate form when appointment changes
   useEffect(() => {
     if (!appointment) return;
-    setTitle(appointment.title);
-    setDescription(appointment.description ?? "");
+    setPatientName(appointment.title);
+    setReason(appointment.description ?? "");
     setStaffId(appointment.staff_id ?? "");
     setRoomId(appointment.room_id ?? "");
 
@@ -119,8 +119,8 @@ export function AppointmentDetailDialog({
   const timeOptions = generateTimeOptions();
 
   async function handleSave() {
-    if (!title.trim()) {
-      toast.error("El título no puede estar vacío");
+    if (!patientName.trim()) {
+      toast.error("El nombre del paciente no puede estar vacío");
       return;
     }
     if (!staffId && !roomId) {
@@ -149,8 +149,8 @@ export function AppointmentDetailDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           business_id: BUSINESS_ID,
-          title: title.trim(),
-          description: description.trim() || null,
+          title: patientName.trim(),
+          description: reason.trim() || null,
           staff_id: staffId || null,
           room_id: roomId || null,
           start_time: startISO,
@@ -247,22 +247,25 @@ export function AppointmentDetailDialog({
           {/* Editable fields */}
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="detail-title">Paciente / Título</Label>
+              <Label htmlFor="detail-patient">Nombre del Paciente</Label>
               <Input
-                id="detail-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Nombre del paciente"
+                id="detail-patient"
+                value={patientName}
+                onChange={(e) => setPatientName(e.target.value)}
+                placeholder="Ej: Juan García"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="detail-description">Descripción</Label>
+              <Label htmlFor="detail-reason">
+                Motivo de la Consulta{" "}
+                <span className="text-slate-400 font-normal">(opcional)</span>
+              </Label>
               <Input
-                id="detail-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Opcional"
+                id="detail-reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Ej: Revisión anual, dolor de cabeza…"
               />
             </div>
 

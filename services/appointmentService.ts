@@ -234,7 +234,12 @@ export async function listAppointments(
   }
   if (filters.staff_id) query = query.eq("staff_id", filters.staff_id);
   if (filters.room_id) query = query.eq("room_id", filters.room_id);
-  if (filters.status) query = query.eq("status", filters.status);
+  // Exclude cancelled appointments by default; pass status explicitly to override
+  if (filters.status) {
+    query = query.eq("status", filters.status);
+  } else {
+    query = query.neq("status", "cancelled");
+  }
 
   const { data, error } = await query;
   if (error) throw new Error(`Failed to list appointments: ${error.message}`);
