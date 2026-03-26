@@ -161,6 +161,43 @@ export async function cancelAppointment(
   return data as AppointmentRow;
 }
 
+// ─── Update ──────────────────────────────────────────────────────────────────
+
+export async function updateAppointment(
+  appointment_id: string,
+  business_id: string,
+  updates: {
+    title?: string;
+    description?: string | null;
+    staff_id?: string | null;
+    room_id?: string | null;
+    start_time?: string;
+    end_time?: string;
+  }
+): Promise<AppointmentRow> {
+  if (updates.start_time && updates.end_time) {
+    if (!isValidTimeRange(updates.start_time, updates.end_time)) {
+      throw new Error("start_time must be before end_time");
+    }
+    const conflict = await checkConflicts(business_id, updates.start_time, updates.end_time, {
+      staff_id: updates.staff_id ?? undefined,
+      room_id: updates.room_id ?? undefined,
+      exclude_appointment_id: appointment_id,
+    });
+    if (conflict.hasConflict) {
+      throw new Error(`Scheduling conflict: ${conflict.conflictType} is already booked`);
+    }
+  }
+
+  const db = createAdminClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (db.from("appointments").update(updates as any).eq("id", appointment_id).eq("business_id", business_id).select().single() as any);
+
+  if (error) throw new Error(`Failed to update appointment: ${error.message}`);
+  if (!data) throw new Error("Appointment not found or access denied");
+  return data as AppointmentRow;
+}
+
 // ─── Read ────────────────────────────────────────────────────────────────────
 
 export async function getAppointment(

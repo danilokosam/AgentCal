@@ -8,14 +8,18 @@ import { TopBar } from "@/components/layout/TopBar";
 import { KpiCards } from "@/components/dashboard/KpiCards";
 import { CalendarGrid } from "@/components/dashboard/CalendarGrid";
 import { AppointmentFormDialog } from "@/components/appointments/AppointmentFormDialog";
+import { AppointmentDetailDialog } from "@/components/appointments/AppointmentDetailDialog";
 import { AlertTriangle } from "lucide-react";
+import type { AppointmentWithRelations } from "@/types/appointments";
 
 type PrefillSlot = { staffId: string; startTime: string } | null;
 
 export default function DashboardPage() {
-  const [date, setDate]         = useState(new Date());
-  const [dialogOpen, setDialog] = useState(false);
-  const [prefill, setPrefill]   = useState<PrefillSlot>(null);
+  const [date, setDate]             = useState(new Date());
+  const [dialogOpen, setDialog]     = useState(false);
+  const [prefill, setPrefill]       = useState<PrefillSlot>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedAppt, setSelectedAppt] = useState<AppointmentWithRelations | null>(null);
 
   const { appointments, isLoading: apptLoading, error: apptError, refetch } = useAppointments(BUSINESS_ID, date);
   const { staff, isLoading: staffLoading, error: staffError }               = useStaff(BUSINESS_ID);
@@ -70,6 +74,7 @@ export default function DashboardPage() {
             staff={staff}
             isLoading={isLoading}
             onCellClick={(staffId, startISO) => { setPrefill({ staffId, startTime: startISO }); setDialog(true); }}
+            onAppointmentClick={(appt) => { setSelectedAppt(appt); setDetailOpen(true); }}
           />
         </div>
       </div>
@@ -81,6 +86,15 @@ export default function DashboardPage() {
         rooms={rooms}
         onSuccess={refetch}
         prefill={prefill}
+      />
+
+      <AppointmentDetailDialog
+        appointment={selectedAppt}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        staff={staff}
+        rooms={rooms}
+        onSuccess={refetch}
       />
     </div>
   );

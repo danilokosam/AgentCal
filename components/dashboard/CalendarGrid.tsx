@@ -12,12 +12,13 @@ type Props = {
   staff: StaffRow[];
   isLoading: boolean;
   onCellClick?: (staffId: string, startISO: string) => void;
+  onAppointmentClick?: (appointment: AppointmentWithRelations) => void;
 };
 
 const ROW_HEIGHT_PX = 48; // px per 30-min slot
 const TIME_COL_W   = 56;  // px for the time gutter
 
-export function CalendarGrid({ appointments, staff, isLoading, onCellClick }: Props) {
+export function CalendarGrid({ appointments, staff, isLoading, onCellClick, onAppointmentClick }: Props) {
   // Group appointments by staff_id
   const byStaff = useMemo(() => {
     const map = new Map<string, AppointmentWithRelations[]>();
@@ -118,7 +119,10 @@ export function CalendarGrid({ appointments, staff, isLoading, onCellClick }: Pr
                       height: rowSpan * ROW_HEIGHT_PX - 4,
                     }}
                   >
-                    <AppointmentBlock appointment={appt} />
+                    <AppointmentBlock
+                      appointment={appt}
+                      onClick={() => onAppointmentClick?.(appt)}
+                    />
                   </div>
                 );
               })}
