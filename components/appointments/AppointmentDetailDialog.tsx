@@ -207,7 +207,7 @@ export function AppointmentDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:w-full sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <DialogTitle className="text-slate-900 text-base">Detalle de Cita</DialogTitle>

@@ -25,7 +25,7 @@ export function KpiCards({ appointments, staff, isLoading }: Props) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
           <Card key={i} className="border-slate-200">
             <CardHeader className="pb-2"><Skeleton className="h-4 w-32" /></CardHeader>

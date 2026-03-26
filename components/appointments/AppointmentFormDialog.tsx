@@ -131,7 +131,7 @@ export function AppointmentFormDialog({ open, onOpenChange, staff, rooms, onSucc
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:w-full sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-slate-900">Nueva Cita</DialogTitle>
         </DialogHeader>

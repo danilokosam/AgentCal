@@ -2,7 +2,7 @@
 import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppointmentBlock } from "./AppointmentBlock";
-import { slotToRow, durationToRowSpan, rowToLabel } from "@/lib/calendarUtils";
+import { slotToRow, durationToRowSpan, rowToLabel, formatTime } from "@/lib/calendarUtils";
 import type { AppointmentWithRelations } from "@/types/appointments";
 import type { StaffRow } from "@/types/database";
 import { TOTAL_SLOTS as SLOTS } from "@/lib/constants";
@@ -36,22 +36,66 @@ export function CalendarGrid({ appointments, staff, isLoading, onCellClick, onAp
   if (isLoading) {
     return (
       <div className="rounded-xl border border-slate-200 overflow-hidden">
-        <div className="flex bg-slate-50 border-b border-slate-200 p-3 gap-3">
-          <Skeleton className="h-5 w-12 shrink-0" />
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-5 flex-1" />)}
+        {/* Mobile skeleton */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-4 py-3">
+              <Skeleton className="h-4 w-12 shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+          ))}
         </div>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex gap-3 p-3 border-b border-slate-100">
-            <Skeleton className="h-10 w-12 shrink-0" />
-            {[1, 2, 3].map((j) => <Skeleton key={j} className="h-10 flex-1 rounded-md" />)}
+        {/* Desktop skeleton */}
+        <div className="hidden md:block">
+          <div className="flex bg-slate-50 border-b border-slate-200 p-3 gap-3">
+            <Skeleton className="h-5 w-12 shrink-0" />
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-5 flex-1" />)}
           </div>
-        ))}
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex gap-3 p-3 border-b border-slate-100">
+              <Skeleton className="h-10 w-12 shrink-0" />
+              {[1, 2, 3].map((j) => <Skeleton key={j} className="h-10 flex-1 rounded-md" />)}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="rounded-xl border border-slate-200 overflow-auto bg-white">
+      {/* ── Mobile: vertical appointment list ─────────────────────────────── */}
+      <div className="md:hidden divide-y divide-slate-100">
+        {appointments.length === 0 ? (
+          <p className="py-12 text-center text-slate-400 text-sm">No hay citas para hoy.</p>
+        ) : (
+          appointments.map((appt) => {
+            const member = staff.find((s) => s.id === appt.staff_id);
+            return (
+              <div
+                key={appt.id}
+                className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 active:bg-slate-100 cursor-pointer"
+                onClick={() => onAppointmentClick?.(appt)}
+              >
+                <div className="w-14 shrink-0 text-xs text-slate-400 font-medium pt-0.5 tabular-nums">
+                  {formatTime(appt.start_time)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900 truncate">{appt.title}</p>
+                  {member && <p className="text-xs text-slate-500 mt-0.5 truncate">{member.name}</p>}
+                </div>
+                <span className="mt-1.5 w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* ── Desktop: full CSS grid ─────────────────────────────────────────── */}
+      <div className="hidden md:block">
       {/* Header row — staff names */}
       <div
         className="flex bg-slate-50 border-b border-slate-200 sticky top-0 z-10"
@@ -130,6 +174,7 @@ export function CalendarGrid({ appointments, staff, isLoading, onCellClick, onAp
           );
         })}
       </div>
+      </div> {/* end desktop grid */}
     </div>
   );
 }
