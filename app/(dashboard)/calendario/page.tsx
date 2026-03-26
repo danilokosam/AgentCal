@@ -7,10 +7,14 @@ import { useRooms } from "@/hooks/useRooms";
 import { TopBar } from "@/components/layout/TopBar";
 import { CalendarGrid } from "@/components/dashboard/CalendarGrid";
 import { AppointmentFormDialog } from "@/components/appointments/AppointmentFormDialog";
+import { AppointmentDetailDialog } from "@/components/appointments/AppointmentDetailDialog";
+import type { AppointmentWithRelations } from "@/types/appointments";
 
 export default function CalendarioPage() {
-  const [date, setDate]         = useState(new Date());
-  const [dialogOpen, setDialog] = useState(false);
+  const [date, setDate]             = useState(new Date());
+  const [dialogOpen, setDialog]     = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedAppt, setSelectedAppt] = useState<AppointmentWithRelations | null>(null);
 
   const { appointments, isLoading: apptLoading, refetch } = useAppointments(BUSINESS_ID, date);
   const { staff, isLoading: staffLoading } = useStaff(BUSINESS_ID);
@@ -29,11 +33,25 @@ export default function CalendarioPage() {
           appointments={appointments}
           staff={staff}
           isLoading={apptLoading || staffLoading}
+          onCellClick={(staffId, startISO) => {
+            setDialog(true);
+          }}
+          onAppointmentClick={(appt) => { setSelectedAppt(appt); setDetailOpen(true); }}
         />
       </div>
+
       <AppointmentFormDialog
         open={dialogOpen}
         onOpenChange={setDialog}
+        staff={staff}
+        rooms={rooms}
+        onSuccess={refetch}
+      />
+
+      <AppointmentDetailDialog
+        appointment={selectedAppt}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
         staff={staff}
         rooms={rooms}
         onSuccess={refetch}

@@ -37,9 +37,9 @@ export function KpiCards({ appointments, staff, isLoading }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       {/* Capacidad */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium text-slate-500">Capacidad Hoy</CardTitle>
           <CalendarCheck className="w-4 h-4 text-slate-400" />
@@ -57,7 +57,7 @@ export function KpiCards({ appointments, staff, isLoading }: Props) {
       </Card>
 
       {/* Pendientes */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium text-slate-500">Citas Hoy</CardTitle>
           <Clock className="w-4 h-4 text-slate-400" />
@@ -71,7 +71,7 @@ export function KpiCards({ appointments, staff, isLoading }: Props) {
       </Card>
 
       {/* MCP Status */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium text-slate-500">Estado del Sistema</CardTitle>
           <Activity className="w-4 h-4 text-slate-400" />
